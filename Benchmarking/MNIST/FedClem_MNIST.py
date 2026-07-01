@@ -10,6 +10,10 @@ from sklearn.mixture import GaussianMixture
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.cluster import KMeans
 import timeit
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from adaptive_preprocessing import preprocess_clients
 
 
 def gen_data(perc_train, G, clusters_per_client=-1):
@@ -1435,6 +1439,7 @@ train_clients, test_clients, centroids_clients, train_central, x_test_central, y
 test_central = {'x':x_test_central, 'y':y_test_central}
 
 Theta_init = initialize_clients(train_clients,cpc)
+Theta_fedgem_init, Pi_fedgem_init, recovered_cpc = preprocess_clients(train_clients)
 true_cluster_number = true_unique_clusters(centroids_clients)
 
 ### AFCL
@@ -1554,7 +1559,7 @@ n_clusters_DpGMM = len(np.unique(y_pred_train))
 ### Ours     
 
 param_clem = {'rad':2e0, 'local_steps':1, 't_steps':10, 'max_iter':10, 'aggregate_final':False, 'P':n_features}
-init_clem = {'theta_dict':Theta_init, 'pi_dict':Pi_init}
+init_clem = {'theta_dict':Theta_fedgem_init, 'pi_dict':Pi_fedgem_init}
 
 clem_clustering = FedClem(param_clem,init_clem)
 
@@ -1607,6 +1612,7 @@ exp_results = {'ar_AFCL':ar_AFCL,
                 'sil_clem':sil_clem,
                 'n_clusters_clem':n_clusters_clem,
                 'runtime_clem': runtime_clem,
+                'recovered_cpc': recovered_cpc,
                 }
 
 filename = 'FedClem_MNIST_'+str(int(timeit.default_timer()))+str(np.random.randint(0,high=1000))+'.mat'

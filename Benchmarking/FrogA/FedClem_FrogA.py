@@ -9,6 +9,10 @@ import copy
 from sklearn.mixture import GaussianMixture
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.cluster import KMeans
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from adaptive_preprocessing import preprocess_clients
 import pandas as pd
 
 def gen_data(perc_train, G, clusters_per_client=-1):
@@ -1439,6 +1443,7 @@ train_clients, test_clients, centroids_clients, train_central, x_test_central, y
 test_central = {'x':x_test_central, 'y':y_test_central}
 
 Theta_init = initialize_clients(train_clients,cpc)
+Theta_fedgem_init, Pi_fedgem_init, recovered_cpc = preprocess_clients(train_clients)
 true_cluster_number = true_unique_clusters(centroids_clients)
 
 ### AFCL
@@ -1537,7 +1542,7 @@ for f in range(n_folds):
 
     for r in range(len(rad_factor_vec)):
         param_clem = {'rad':rad_factor_vec[r], 'local_steps':1, 't_steps':50, 'max_iter':10, 'aggregate_final':False, 'P':n_features}
-        init_clem = {'theta_dict':Theta_init, 'pi_dict':Pi_init}
+        init_clem = {'theta_dict':Theta_fedgem_init, 'pi_dict':Pi_fedgem_init}
 
         clem_clustering = FedClem(param_clem,init_clem)
         final_centroids, final_clusters = clem_clustering.train(train_clients_f)
@@ -1549,7 +1554,7 @@ clem_sil_cv_vec = np.mean(clem_sil_cv_arr,axis=0)
 r_clem = np.argmax(clem_sil_cv_vec)
 
 param_clem = {'rad':rad_factor_vec[r_clem], 'local_steps':1, 't_steps':50, 'max_iter':10, 'aggregate_final':False, 'P':n_features}
-init_clem = {'theta_dict':Theta_init, 'pi_dict':Pi_init}
+init_clem = {'theta_dict':Theta_fedgem_init, 'pi_dict':Pi_fedgem_init}
 
 clem_clustering = FedClem(param_clem,init_clem)
 final_centroids, final_clusters = clem_clustering.train(train_clients)
@@ -1587,8 +1592,9 @@ exp_results = {'ar_AFCL':ar_AFCL,
 
                 'ar_clem':ar_clem,
                 'sil_clem':sil_clem,
-                'n_clusters_clem':n_clusters_clem,
-                }
+               'n_clusters_clem':n_clusters_clem,
+               'recovered_cpc':recovered_cpc,
+               }
 
 filename = 'FedClem_FrogA_'+str(int(timeit.default_timer()))+str(np.random.randint(0,high=1000))+'.mat'
 scipy.io.savemat(filename,exp_results)
